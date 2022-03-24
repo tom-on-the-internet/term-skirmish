@@ -2,7 +2,6 @@ package main
 
 import (
 	"math/rand"
-	"strconv"
 )
 
 type (
@@ -19,14 +18,14 @@ type (
 	}
 )
 
-func collided(a, b entity) bool {
-	posA, posB := a.getPosition(), b.getPosition()
+func collided(entityA, entityB entity) bool {
+	posA, posB := entityA.getPosition(), entityB.getPosition()
 
 	if positionsAreSame(posA, posB) {
 		return true
 	}
 
-	prevPosA, prevPosB := a.getPrevPosition(), b.getPrevPosition()
+	prevPosA, prevPosB := entityA.getPrevPosition(), entityB.getPrevPosition()
 
 	// swapped position
 	if positionsAreSame(posA, prevPosB) && positionsAreSame(posB, prevPosA) {
@@ -48,25 +47,45 @@ func randomPosition() [2]int {
 	return [2]int{x, y}
 }
 
+func wallPosition() [2]int {
+	maxX, maxY := getSize()
+
+	switch rand.Intn(4) {
+	case 0:
+		// top
+		return [2]int{rand.Intn(maxX), 1}
+	case 1:
+		// bottom
+		return [2]int{rand.Intn(maxX), maxY}
+	case 2:
+		// left
+		return [2]int{1, rand.Intn(maxY)}
+	default:
+		// right
+		return [2]int{maxX, rand.Intn(maxY)}
+	}
+}
+
 func countShips(entities []entity) int {
-	numShips := 0
+	return len(getShipsFromEntities(entities))
+}
+
+func getShipsFromEntities(entities []entity) []*ship {
+	ships := []*ship{}
 
 	for _, e := range entities {
-		if _, ok := e.(*ship); ok {
-			numShips++
+		if ship, ok := e.(*ship); ok {
+			ships = append(ships, ship)
 		}
 	}
 
-	return numShips
+	return ships
 }
 
-func getStatus(entities []entity) string {
-	x, y := getSize()
-	return "ship count: " + strconv.Itoa(
-		countShips(entities),
-	) + " x: " + strconv.Itoa(
-		x,
-	) + " y: " + strconv.Itoa(
-		y,
-	)
+func abs(i int) int {
+	if i < 0 {
+		i *= -1
+	}
+
+	return i
 }

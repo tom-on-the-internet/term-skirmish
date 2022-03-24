@@ -5,18 +5,21 @@ type bullet struct {
 	prevPosition position
 	direction    [2]int
 	active       bool
+	bulletPower  int
 }
 
 func newBullet(pos position, direction [2]int) bullet {
 	return bullet{
-		position:  pos,
-		direction: direction,
-		active:    true,
+		position:     pos,
+		prevPosition: pos,
+		direction:    direction,
+		active:       true,
+		bulletPower:  1,
 	}
 }
 
 func (b *bullet) avatar() string {
-	return "🔹"
+	return "🔸"
 }
 
 func (b *bullet) getPosition() position {
@@ -32,7 +35,14 @@ func (b *bullet) shouldRemove() bool {
 }
 
 func (b *bullet) takeTurn(entities []entity) []entity {
-	b.move()
+	if b.bulletPower == 1 {
+		b.move()
+		b.bulletPower = 0
+
+		return nil
+	}
+
+	b.bulletPower = 1
 
 	return nil
 }
@@ -42,17 +52,18 @@ func (b *bullet) onCollide(e entity) {
 }
 
 func (b *bullet) move() {
-	x := b.position[0] + b.direction[0]
-	y := b.position[1] + b.direction[1]
+	b.prevPosition = b.getPosition()
+	xPos := b.position[0] + b.direction[0]
+	yPos := b.position[1] + b.direction[1]
 
 	maxX, maxY := getSize()
-	if x < 1 || x > maxX || y < 1 || y > maxY {
+	if xPos < 1 || xPos > maxX || yPos < 1 || yPos > maxY {
 		b.active = false
 
 		return
 	}
 
-	b.position = position{x, y}
+	b.position = position{xPos, yPos}
 }
 
 func (b *bullet) onRemoveExplode() bool {
