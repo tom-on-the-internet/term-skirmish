@@ -12,12 +12,15 @@ type ship struct {
 }
 
 func newShip() ship {
+	wallPos := wallPosition()
+
 	return ship{
-		position:    randomPosition(),
-		destination: randomPosition(),
-		health:      4,
-		movePower:   3,
-		bulletPower: rand.Intn(10),
+		position:     wallPos,
+		prevPosition: wallPos,
+		destination:  randomPosition(),
+		health:       4,
+		movePower:    6,
+		bulletPower:  rand.Intn(10),
 	}
 }
 
@@ -47,7 +50,7 @@ func (s *ship) shouldRemove() bool {
 }
 
 func (s *ship) takeTurn(entities []entity) []entity {
-	if s.movePower == 3 {
+	if s.movePower >= 12 {
 		s.movePower = 0
 		s.moveTowardDestination()
 
@@ -55,12 +58,12 @@ func (s *ship) takeTurn(entities []entity) []entity {
 			s.destination = randomPosition()
 		}
 	} else {
-		s.movePower++
+		s.movePower += s.health
 	}
 
 	var bullet bullet
 
-	if s.bulletPower == 10 {
+	if s.bulletPower >= 100 {
 		s.bulletPower = 0
 
 		x := rand.Intn(3) - 1
@@ -68,11 +71,12 @@ func (s *ship) takeTurn(entities []entity) []entity {
 		wussOut := rand.Intn(2)
 
 		if wussOut == 0 && (x != 0 || y != 0) {
-			bullet = newBullet(s.position, [2]int{x, y})
+			pos := position{s.position[0] + x, s.position[1] + y}
+			bullet = newBullet(pos, [2]int{x, y})
 		}
 
 	} else {
-		s.bulletPower++
+		s.bulletPower += s.health
 	}
 
 	// try to shoot at target

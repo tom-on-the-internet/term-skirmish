@@ -37,7 +37,13 @@ func (e *explosion) takeTurn(entities []entity) []entity {
 }
 
 func (e *explosion) onCollide(otherEntity entity) {
-	e.health = 100
+	if _, collidedWithShip := otherEntity.(*ship); collidedWithShip {
+		e.health = 0
+
+		return
+	}
+
+	e.health += 10
 }
 
 func (e *explosion) onRemoveExplode() bool {

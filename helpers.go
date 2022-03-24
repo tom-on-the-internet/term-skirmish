@@ -48,25 +48,53 @@ func randomPosition() [2]int {
 	return [2]int{x, y}
 }
 
+func wallPosition() [2]int {
+	maxX, maxY := getSize()
+
+	switch rand.Intn(4) {
+	case 0:
+		// top
+		return [2]int{rand.Intn(maxX), 1}
+	case 1:
+		// bottom
+		return [2]int{rand.Intn(maxX), maxY}
+	case 2:
+		// left
+		return [2]int{1, rand.Intn(maxY)}
+	default:
+		// right
+		return [2]int{maxX, rand.Intn(maxY)}
+	}
+}
+
 func countShips(entities []entity) int {
-	numShips := 0
+	return len(getShipsFromEntities(entities))
+}
+
+func getStatus(entities []entity, shipCount int) string {
+	return "total ship count: " + strconv.Itoa(
+		shipCount,
+	) + "  |  current ship count: " + strconv.Itoa(
+		countShips(entities),
+	)
+}
+
+func getShipsFromEntities(entities []entity) []*ship {
+	ships := []*ship{}
 
 	for _, e := range entities {
-		if _, ok := e.(*ship); ok {
-			numShips++
+		if ship, ok := e.(*ship); ok {
+			ships = append(ships, ship)
 		}
 	}
 
-	return numShips
+	return ships
 }
 
-func getStatus(entities []entity) string {
-	x, y := getSize()
-	return "ship count: " + strconv.Itoa(
-		countShips(entities),
-	) + " x: " + strconv.Itoa(
-		x,
-	) + " y: " + strconv.Itoa(
-		y,
-	)
+func abs(i int) int {
+	if i < 0 {
+		i *= -1
+	}
+
+	return i
 }

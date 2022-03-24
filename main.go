@@ -1,96 +1,127 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
+	"os"
+	"os/signal"
 	"time"
 )
+
+var gameOver = false
 
 func main() {
 	beforeGame()
 	runGame()
-	gameOver()
 }
 
 func beforeGame() {
 	rand.Seed(time.Now().UnixNano())
 	hideCursor()
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		for range c {
+			gameOver = true
+		}
+	}()
 }
 
 func runGame() {
+	shipCount := 0
 	entities := []entity{}
-	numShips := 50
 
-	for i := 0; i < numShips; i++ {
-		ship := newShip()
-		entities = append(entities, &ship)
-	}
-
-	for numShips > 1 {
+	// game runs forever
+	for !gameOver {
 		clear()
 
-		newEntities := []entity{}
+		newEntities := takeTurns(entities)
 
-		for _, entity := range entities {
-			es := entity.takeTurn(entities)
-			if newEntities != nil {
-				newEntities = append(newEntities, es...)
-			}
-		}
+		checkCollisions(entities)
 
-		collidedEntities := make(map[entity]struct{})
+		entities = removeEntities(entities)
 
-		for _, entity := range entities {
-			if _, collided := collidedEntities[entity]; collided {
-				continue
-			}
+		drawGame(entities, shipCount)
 
-			for _, otherEntity := range entities {
-				if entity == otherEntity {
-					continue
-				}
-
-				if collided(entity, otherEntity) {
-					entity.onCollide(otherEntity)
-
-					collidedEntities[entity] = struct{}{}
-				}
-			}
-		}
-
-		remainingEntities := []entity{}
-
-		for _, entity := range entities {
-			if !entity.shouldRemove() {
-				remainingEntities = append(remainingEntities, entity)
-
-				continue
-			}
-
-			if entity.onRemoveExplode() {
-				explosion := newExplosion(entity.getPosition())
-				remainingEntities = append(remainingEntities, &explosion)
-			}
-		}
-
-		entities = remainingEntities
-
-		drawGame(entities)
-
+		// 60 fps
 		time.Sleep(time.Second / 60)
 
 		entities = append(entities, newEntities...)
 
-		if rand.Intn(100) == 99 {
-			ship := newShip()
+		if rand.Intn(100) == 0 {
 
-			entities = append(entities, &ship)
+			if rand.Intn(100) == 0 {
+				sniper := newSniper()
+				entities = append(entities, &sniper)
+			} else {
+				ship := newShip()
+				entities = append(entities, &ship)
+			}
+
+			shipCount++
 		}
-		numShips = countShips(entities)
+	}
+
+	onGameOver()
+}
+
+func takeTurns(entities []entity) []entity {
+	newEntities := []entity{}
+
+	for _, entity := range entities {
+		es := entity.takeTurn(entities)
+		if newEntities != nil {
+			newEntities = append(newEntities, es...)
+		}
+	}
+
+	return newEntities
+}
+
+func checkCollisions(entities []entity) {
+	collidedEntities := make(map[entity]struct{})
+
+	for _, entity := range entities {
+		if _, collided := collidedEntities[entity]; collided {
+			continue
+		}
+
+		for _, otherEntity := range entities {
+			if entity == otherEntity {
+				continue
+			}
+
+			if collided(entity, otherEntity) {
+				entity.onCollide(otherEntity)
+
+				collidedEntities[entity] = struct{}{}
+			}
+		}
 	}
 }
 
-func drawGame(entities []entity) {
-	// draw
+func removeEntities(entities []entity) []entity {
+	remainingEntities := []entity{}
+
+	for _, entity := range entities {
+		if !entity.shouldRemove() {
+			remainingEntities = append(remainingEntities, entity)
+
+			continue
+		}
+
+		if entity.onRemoveExplode() {
+			explosion := newExplosion(entity.getPosition())
+			remainingEntities = append(remainingEntities, &explosion)
+		}
+	}
+
+	return remainingEntities
+}
+
+func drawGame(entities []entity, shipCount int) {
 	for _, entity := range entities {
 		moveCursor(entity.getPosition())
 		draw(entity.avatar())
@@ -98,16 +129,28 @@ func drawGame(entities []entity) {
 
 	width, _ := getSize()
 
-	status := getStatus(entities)
+	status := getStatus(entities, shipCount)
 	moveCursor(position{width/2 - (len(status) / 2), 0})
+
 	draw(status)
 
 	render()
 }
 
-func gameOver() {
+func onGameOver() {
 	clear()
 	showCursor()
-	moveCursor(position{0, 0})
-	draw("Thanks for watching.")
+
+	moveCursor(position{1, 1})
+	draw("🟦 🟢 🟡 🔴 ⭕")
+
+	moveCursor(position{0, 3})
+
+	username, _ := os.LookupEnv("USER")
+	draw(fmt.Sprintf("See you again soon %v!", username))
+
+	moveCursor(position{0, 5})
+
+	render()
+	os.Exit(0)
 }
