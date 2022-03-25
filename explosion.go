@@ -8,7 +8,7 @@ type explosion struct {
 func newExplosion(pos position) explosion {
 	return explosion{
 		position: pos,
-		health:   100,
+		health:   500,
 	}
 }
 
@@ -37,13 +37,19 @@ func (e *explosion) takeTurn(entities []entity) []entity {
 }
 
 func (e *explosion) onCollide(otherEntity entity) {
-	if _, collidedWithShip := otherEntity.(*ship); collidedWithShip {
-		e.health = 0
+	if otherExplosion, collidedWithExplosion := otherEntity.(*explosion); collidedWithExplosion {
+		if e.health > otherExplosion.health {
+			e.health += 100
+			otherExplosion.health = 0
+		} else {
+			otherExplosion.health += 100
+			e.health = 0
+		}
 
 		return
 	}
 
-	e.health += 10
+	e.health += 100
 }
 
 func (e *explosion) onRemoveExplode() bool {

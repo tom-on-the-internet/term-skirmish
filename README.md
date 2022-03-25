@@ -36,3 +36,8 @@ TODO: Add video.
 
 The code in this repo is not high quality. It was hacked together in a few evenings.
 Please do not copy its style, or think this is how I code generally.
+
+## TODO
+
+Make teams
+Have a score
