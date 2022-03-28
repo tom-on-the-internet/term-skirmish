@@ -72,11 +72,12 @@ func countShips(entities []entity) int {
 }
 
 func getStatus(entities []entity, shipCount int) string {
+	currentShipCount := countShips(entities)
 	return "total ship count: " + strconv.Itoa(
 		shipCount,
 	) + "  |  current ship count: " + strconv.Itoa(
 		countShips(entities),
-	)
+	) + "  |  destroyed count: " + strconv.Itoa(shipCount-currentShipCount)
 }
 
 func getShipsFromEntities(entities []entity) []*ship {

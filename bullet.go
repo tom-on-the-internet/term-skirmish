@@ -19,7 +19,7 @@ func newBullet(pos position, direction [2]int) bullet {
 }
 
 func (b *bullet) avatar() string {
-	return "🔹"
+	return "🔸"
 }
 
 func (b *bullet) getPosition() position {
@@ -52,6 +52,7 @@ func (b *bullet) onCollide(e entity) {
 }
 
 func (b *bullet) move() {
+	b.prevPosition = b.getPosition()
 	xPos := b.position[0] + b.direction[0]
 	yPos := b.position[1] + b.direction[1]
 

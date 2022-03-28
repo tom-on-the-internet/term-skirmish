@@ -6,9 +6,39 @@ type ship struct {
 	position     position
 	prevPosition position
 	destination  position
-	health       int
+	alive        bool
 	movePower    int
 	bulletPower  int
+	team         team
+}
+
+type team int
+
+const (
+	BLUE = iota
+	RED
+	YELLOW
+	GREEN
+	ORANGE
+	BROWN
+	PURPLE
+	WHITE
+)
+
+func (d team) Ok() bool {
+	switch d {
+	case BLUE,
+		BROWN,
+		GREEN,
+		ORANGE,
+		PURPLE,
+		RED,
+		WHITE,
+		YELLOW:
+		return true
+	}
+
+	return false
 }
 
 func newShip() ship {
@@ -18,23 +48,35 @@ func newShip() ship {
 		position:     wallPos,
 		prevPosition: wallPos,
 		destination:  randomPosition(),
-		health:       4,
-		movePower:    6,
+		alive:        true,
+		movePower:    3,
 		bulletPower:  rand.Intn(10),
+		team:         team(rand.Intn(2)),
 	}
 }
 
 func (s *ship) avatar() string {
-	switch s.health {
-	case 4:
+	switch s.team {
+	case BLUE:
+		return "🔵"
+	case BROWN:
+		return "🟤"
+	case GREEN:
 		return "🟢"
-	case 3:
-		return "🟡"
-	case 2:
+	case ORANGE:
+		return "🟠"
+	case PURPLE:
+		return "🟣"
+	case RED:
 		return "🔴"
-	default:
-		return "⭕"
+	case WHITE:
+		return "⚪"
+	case YELLOW:
+		return "🟡"
 	}
+
+	// indicates error
+	return "❌"
 }
 
 func (s *ship) getPosition() position {
@@ -46,51 +88,136 @@ func (s *ship) getPrevPosition() position {
 }
 
 func (s *ship) shouldRemove() bool {
-	return s.health == 0
+	return !s.alive
 }
 
 func (s *ship) takeTurn(entities []entity) []entity {
-	if s.movePower >= 12 {
-		s.movePower = 0
-		s.moveTowardDestination()
+	s.move(entities)
 
-		if s.hasReachedDestination() {
-			s.destination = randomPosition()
-		}
-	} else {
-		s.movePower += s.health
+	bullet := s.shoot(entities)
+
+	if bullet == nil {
+		return []entity{}
 	}
 
-	var bullet bullet
-
-	if s.bulletPower >= 100 {
-		s.bulletPower = 0
-
-		x := rand.Intn(3) - 1
-		y := rand.Intn(3) - 1
-		wussOut := rand.Intn(2)
-
-		if wussOut == 0 && (x != 0 || y != 0) {
-			pos := position{s.position[0] + x, s.position[1] + y}
-			bullet = newBullet(pos, [2]int{x, y})
-		}
-
-	} else {
-		s.bulletPower += s.health
-	}
-
-	// try to shoot at target
-	// can shoot at a target if it is in a direction
-
-	return []entity{&bullet}
+	return []entity{bullet}
 }
 
-func (s *ship) onCollide(e entity) {
-	if s.health == 0 {
+func (s *ship) shoot(entities []entity) *bullet {
+	if s.bulletPower != 15 {
+		s.bulletPower++
+
+		return nil
+	}
+
+	s.bulletPower = 0
+
+	if wussOut := rand.Intn(2) == 0; wussOut {
+		return nil
+	}
+
+	ships := getShipsFromEntities(entities)
+
+	if len(ships) == 0 {
+		return nil
+	}
+
+	seen := make(map[*ship]struct{})
+
+	for {
+		// no one to shoot at
+		if len(seen) == len(ships) {
+			break
+		}
+
+		ship := ships[rand.Intn(len(ships))]
+
+		// already seen
+		if _, ok := seen[ship]; ok {
+			continue
+		}
+
+		// same team
+		if s.team == ship.team {
+			seen[ship] = struct{}{}
+
+			continue
+		}
+
+		if positionsAreSame(s.position, ship.position) {
+			seen[ship] = struct{}{}
+
+			continue
+		}
+
+		xDis := abs(s.getPosition()[0] - ship.getPosition()[0])
+		yDis := abs(s.getPosition()[1] - ship.getPosition()[1])
+
+		// no straight shot
+		if xDis != 0 && yDis != 0 && xDis-yDis != 0 {
+			seen[ship] = struct{}{}
+
+			continue
+		}
+
+		// now there must be a straight shot
+		// make bullet and fire
+		xPos := 0
+		yPos := 0
+
+		if s.getPosition()[0] > ship.getPosition()[0] {
+			xPos = -1
+		} else if s.getPosition()[0] < ship.getPosition()[0] {
+			xPos = 1
+		}
+
+		if s.getPosition()[1] > ship.getPosition()[1] {
+			yPos = -1
+		} else if s.getPosition()[1] < ship.getPosition()[1] {
+			yPos = 1
+		}
+
+		pos := position{s.position[0] + xPos, s.position[1] + yPos}
+		bullet := newBullet(pos, [2]int{xPos, yPos})
+
+		return &bullet
+	}
+
+	return nil
+}
+
+func (s *ship) move(entities []entity) {
+	if s.movePower != 3 {
+		s.movePower++
+
 		return
 	}
 
-	s.health--
+	s.movePower = 0
+	s.moveTowardDestination()
+
+	if s.hasReachedDestination() {
+		s.destination = s.getDestination(entities)
+	}
+}
+
+func (s *ship) getDestination(entities []entity) position {
+	if rand.Intn(2) == 0 {
+		return randomPosition()
+	}
+
+	for _, e := range entities {
+		ship, ok := e.(*ship)
+		if ok && ship.team != s.team {
+			return ship.getPosition()
+		}
+	}
+
+	return randomPosition()
+}
+
+func (s *ship) onCollide(e entity) {
+	s.alive = false
 }
 
 func (s *ship) hasReachedDestination() bool {

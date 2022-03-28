@@ -33,7 +33,15 @@ func runGame() {
 	shipCount := 0
 	entities := []entity{}
 
-	// game runs forever
+	reinforce := func() {
+		for i := 0; i < rand.Intn(4); i++ {
+			ship := newShip()
+			entities = append(entities, &ship)
+
+			shipCount++
+		}
+	}
+
 	for !gameOver {
 		clear()
 
@@ -51,17 +59,9 @@ func runGame() {
 		entities = append(entities, newEntities...)
 
 		if rand.Intn(100) == 0 {
-
-			if rand.Intn(100) == 0 {
-				sniper := newSniper()
-				entities = append(entities, &sniper)
-			} else {
-				ship := newShip()
-				entities = append(entities, &ship)
-			}
-
-			shipCount++
+			reinforce()
 		}
+
 	}
 
 	onGameOver()
@@ -153,4 +153,18 @@ func onGameOver() {
 
 	render()
 	os.Exit(0)
+}
+
+func allSameTeam(entities []entity) bool {
+	seenTeams := make(map[team]struct{})
+	ships := getShipsFromEntities(entities)
+
+	for _, ship := range ships {
+		seenTeams[ship.team] = struct{}{}
+		if len(seenTeams) == 2 {
+			return false
+		}
+	}
+
+	return true
 }
